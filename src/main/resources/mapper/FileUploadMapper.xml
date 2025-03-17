@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiconvert.mapper.FileUploadMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO file_upload (
+            original_filename, file_path, file_size, file_type, 
+            upload_time, status
+        ) VALUES (
+            #{originalFilename}, #{filePath}, #{fileSize}, #{fileType}, 
+            #{uploadTime}, #{status}
+        )
+    </insert>
+
+    <select id="selectById" resultType="com.aiconvert.entity.FileUpload">
+        SELECT * FROM file_upload WHERE id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE file_upload SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateById">
+        UPDATE file_upload 
+        SET status = #{status},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper> 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>配额使用警告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .quota-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .quota-item {
+            margin-bottom: 15px;
+        }
+        .progress-bar {
+            background-color: #e9ecef;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress {
+            height: 100%;
+            background-color: #007bff;
+            transition: width .6s ease;
+        }
+        .danger {
+            background-color: #dc3545;
+        }
+        .warning-bar {
+            background-color: #ffc107;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 th:text="${appName}">AI文档转换</h2>
+        <h3>配额使用警告</h3>
+    </div>
+
+    <div class="warning">
+        <strong>注意：</strong>您的配额使用量已接近限制，为确保服务正常使用，请及时升级您的配额。
+    </div>
+
+    <div class="quota-info">
+        <div class="quota-item">
+            <h4>转换次数使用情况</h4>
+            <p>
+                已使用：<span th:text="${usedConversions}">90</span> / 
+                总次数：<span th:text="${totalConversions}">100</span>
+                (<span th:text="${conversionUsageRate}">90%</span>)
+            </p>
+            <div class="progress-bar">
+                <div class="progress" th:classappend="${conversionUsageRate >= 90 ? 'danger' : 'warning-bar'}"
+                     th:style="'width: ' + ${conversionUsageRate}">
+                </div>
+            </div>
+        </div>
+
+        <div class="quota-item">
+            <h4>存储空间使用情况</h4>
+            <p>
+                已使用：<span th:text="${usedStorageGB}">9.5</span>GB / 
+                总空间：<span th:text="${totalStorageGB}">10</span>GB
+                (<span th:text="${storageUsageRate}">95%</span>)
+            </p>
+            <div class="progress-bar">
+                <div class="progress" th:classappend="${storageUsageRate >= 90 ? 'danger' : 'warning-bar'}"
+                     th:style="'width: ' + ${storageUsageRate}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center;">
+        <a href="#" class="button">立即升级配额</a>
+    </div>
+
+    <div class="footer">
+        <p>
+            此邮件由系统自动发送，请勿直接回复。<br>
+            如有任何问题，请联系客服。
+        </p>
+        <p th:text="'© ' + ${#dates.year(#dates.createNow())} + ' ' + ${appName}">
+            © 2024 AI文档转换
+        </p>
+    </div>
+</body>
+</html> 

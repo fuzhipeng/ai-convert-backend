@@ -1,0 +1,46 @@
+target/ 
+.idea/ 
+*.iml 
+.mvn/ 
+mvnw 
+mvnw.cmd 
+.settings/ 
+.classpath 
+.project 
+logs/ 
+# 添加敏感配置文件
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+!src/main/resources/application-example.yml
+
+# 其他敏感文件
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+tmp/
+
+# IDE相关
+.vscode/
+.idea/
+*.iws
+*.iml
+*.ipr
+.project
+.classpath
+.settings/
+
+# 操作系统相关
+.DS_Store
+Thumbs.db

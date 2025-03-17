@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiconvert.mapper.ConversionRecordMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO conversion_record (
+            file_id, start_time, status
+        ) VALUES (
+            #{fileId}, #{startTime}, #{status}
+        )
+    </insert>
+
+    <select id="selectByFileId" resultType="com.aiconvert.entity.ConversionRecord">
+        SELECT * FROM conversion_record WHERE file_id = #{fileId}
+    </select>
+
+    <select id="selectById" resultType="com.aiconvert.entity.ConversionRecord">
+        SELECT * FROM conversion_record WHERE id = #{id}
+    </select>
+
+    <update id="update">
+        UPDATE conversion_record 
+        SET html_content = #{htmlContent},
+            error_message = #{errorMessage},
+            status = #{status},
+            end_time = #{endTime}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateById">
+        UPDATE conversion_record 
+        SET html_content = #{htmlContent},
+            error_message = #{errorMessage},
+            status = #{status},
+            end_time = #{endTime}
+        WHERE id = #{id}
+    </update>
+</mapper> 

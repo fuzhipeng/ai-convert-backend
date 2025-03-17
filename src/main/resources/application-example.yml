@@ -1,0 +1,47 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/your_database_name?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: your_username
+    password: your_password
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Claude API配置
+claude:
+  api:
+    url: https://api.anthropic.com/v1/messages
+    key: your_api_key
+    model: claude-3-opus-20240229
+    max-tokens: 4096
+    temperature: 0.7
+
+# 文件存储配置
+storage:
+  upload-dir: ./uploads
+  temp-dir: ./temp
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.yourpackage.model
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.yourpackage: DEBUG
+  file:
+    path: ./logs
+    name: ./logs/application.log 

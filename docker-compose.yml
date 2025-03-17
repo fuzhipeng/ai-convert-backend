@@ -1,0 +1,54 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai-convert-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ai_convert
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+
+  redis:
+    image: redis:6.2
+    container_name: ai-convert-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    container_name: ai-convert-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    volumes:
+      - ./docker/rabbitmq/data:/var/lib/rabbitmq
+    restart: always
+
+  minio:
+    image: minio/minio
+    container_name: ai-convert-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    volumes:
+      - ./docker/minio/data:/data
+    command: server /data --console-address ":9001"
+    restart: always 
