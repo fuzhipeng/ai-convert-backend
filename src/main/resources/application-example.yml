@@ -13,8 +13,8 @@ spring:
   # 文件上传配置
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:10MB}
 
 # Claude API配置
 claude:
@@ -24,11 +24,18 @@ claude:
     model: ${CLAUDE_API_MODEL:claude-3-opus-20240229}
     max-tokens: ${CLAUDE_MAX_TOKENS:4096}
     temperature: ${CLAUDE_TEMPERATURE:0.7}
+    prompts:
+      default: ${CLAUDE_PROMPT_DEFAULT:默认提示词}
 
 # 文件存储配置
 storage:
-  upload-dir: ${UPLOAD_DIR:./uploads}
-  temp-dir: ${TEMP_DIR:./temp}
+  upload-dir: ${STORAGE_UPLOAD_DIR:/app/uploads}
+  temp-dir: ${STORAGE_TEMP_DIR:/app/temp}
+
+# 兼容旧配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/app/uploads/}
 
 # MyBatis配置
 mybatis:
@@ -36,6 +43,7 @@ mybatis:
   type-aliases-package: com.aiconvert.entity
   configuration:
     map-underscore-to-camel-case: true
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.stdout.StdOutImpl}
 
 # 日志配置
 logging:
@@ -43,5 +51,5 @@ logging:
     root: ${LOG_LEVEL:INFO}
     com.aiconvert: ${APP_LOG_LEVEL:DEBUG}
   file:
-    path: ${LOG_PATH:./logs}
-    name: ${LOG_FILE:./logs/application.log} 
+    path: ${LOG_PATH:/app/logs}
+    name: ${LOG_FILE:/app/logs/application.log} 
