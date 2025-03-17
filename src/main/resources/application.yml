@@ -1,0 +1,55 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ai_convert?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:10MB}
+
+# Claude API配置
+claude:
+  api:
+    url: ${CLAUDE_API_URL:https://api.anthropic.com/v1/messages}
+    key: ${CLAUDE_API_KEY:your_api_key}
+    model: ${CLAUDE_API_MODEL:claude-3-opus-20240229}
+    max-tokens: ${CLAUDE_MAX_TOKENS:4096}
+    temperature: ${CLAUDE_TEMPERATURE:0.7}
+    prompts:
+      default: ${CLAUDE_PROMPT_DEFAULT:默认提示词}
+
+# 文件存储配置
+storage:
+  upload-dir: ${STORAGE_UPLOAD_DIR:/app/uploads}
+  temp-dir: ${STORAGE_TEMP_DIR:/app/temp}
+
+# 兼容旧配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/app/uploads/}
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.aiconvert.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.stdout.StdOutImpl}
+
+# 日志配置
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.aiconvert: ${APP_LOG_LEVEL:DEBUG}
+  file:
+    path: ${LOG_PATH:/app/logs}
+    name: ${LOG_FILE:/app/logs/application.log} 
