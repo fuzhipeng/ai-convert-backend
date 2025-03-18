@@ -65,6 +65,11 @@ public class ClaudeService {
         this.restTemplate = restTemplate;
     }
 
+    
+    /**
+     * 将文件内容转换为HTML
+     * 修改为直接返回预定义的HTML，不调用Claude API
+     */
     public String convertToHtml(String filePath, String fileType) throws Exception {
         logger.info("开始转换文件：{}, 文件类型：{}", filePath, fileType);
         long startTime = System.currentTimeMillis();
@@ -74,59 +79,231 @@ public class ClaudeService {
             logger.error("文件不存在：{}", filePath);
             throw new IllegalArgumentException("文件不存在");
         }
-
-        // 根据文件类型选择不同的处理方式
-        String content = null;
-        Charset usedCharset = null;
         
-        // 处理Office文档
-        if ("docx".equalsIgnoreCase(fileType)) {
-            content = extractDocxContent(file);
-            usedCharset = StandardCharsets.UTF_8; // DOCX内容使用UTF-8编码
-        } else {
-            // 处理文本文件，尝试不同的编码
-            Exception lastException = null;
-
-            // 首先尝试检测文件编码
-            Charset detectedCharset = detectFileEncoding(file);
-            if (detectedCharset != null) {
-                content = tryReadWithCharset(file, detectedCharset);
-                if (content != null) {
-                    usedCharset = detectedCharset;
-                    logger.info("使用检测到的编码 {} 成功读取文件", detectedCharset);
-                }
-            }
-
-            // 如果检测的编码不成功，尝试预定义的编码列表
-            if (content == null) {
-                for (Charset charset : CHARSETS) {
-                    content = tryReadWithCharset(file, charset);
-                    if (content != null) {
-                        usedCharset = charset;
-                        logger.info("使用编码 {} 成功读取文件", charset);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (content == null) {
-            logger.error("无法读取文件内容");
-            throw new IOException("无法读取文件内容");
-        }
-
-        logger.info("文件内容读取完成，总字符数：{}", content.length());
+        // 不再读取文件内容和调用Claude API，直接返回预定义的HTML
+        String html = getPredefinedHtml();
         
-        // 添加文件内容预览日志
-        String preview = content.length() > 500 ? content.substring(0, 500) + "..." : content;
-        logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
-
-        // 调用Claude API进行转换
-        String result = callClaudeApi(content, fileType);
-
         long endTime = System.currentTimeMillis();
-        logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
-        return result;
+        logger.info("文件转换完成，耗时：{}ms", (endTime - startTime));
+        
+        return html;
+    }
+    
+    /**
+     * 返回预定义的HTML代码
+     */
+    private String getPredefinedHtml() {
+        return "<!DOCTYPE html>\n" +
+               "<html lang=\"zh\">\n" +
+               "<head>\n" +
+               "  <meta charset=\"UTF-8\">\n" +
+               "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+               "  <title>深圳服务贸易发展概念卡片</title>\n" +
+               "  <script src=\"https://cdn.tailwindcss.com\"></script>\n" +
+               "  <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">\n" +
+               "  \n" +
+               "  <style type=\"text/tailwindcss\">\n" +
+               "    @layer utilities {\n" +
+               "      .w-card {\n" +
+               "        width: 1080px;\n" +
+               "      }\n" +
+               "      .h-card {\n" +
+               "        height: 800px;\n" +
+               "      }\n" +
+               "    }\n" +
+               "  </style>\n" +
+               "  \n" +
+               "  <style>\n" +
+               "    :root {\n" +
+               "      --color-primary: #0056b3;\n" +
+               "      --color-secondary: #34c3ff;\n" +
+               "      --color-accent: #ff6b35;\n" +
+               "    }\n" +
+               "    \n" +
+               "    .text-clamp-2 {\n" +
+               "      display: -webkit-box;\n" +
+               "      -webkit-line-clamp: 2;\n" +
+               "      -webkit-box-orient: vertical;\n" +
+               "      overflow: hidden;\n" +
+               "    }\n" +
+               "    \n" +
+               "    .text-clamp-3 {\n" +
+               "      display: -webkit-box;\n" +
+               "      -webkit-line-clamp: 3;\n" +
+               "      -webkit-box-orient: vertical;\n" +
+               "      overflow: hidden;\n" +
+               "    }\n" +
+               "    \n" +
+               "    .text-primary { color: var(--color-primary); }\n" +
+               "    .text-secondary { color: var(--color-secondary); }\n" +
+               "    .text-accent { color: var(--color-accent); }\n" +
+               "    \n" +
+               "    .bg-primary { background-color: var(--color-primary); }\n" +
+               "    .bg-secondary { background-color: var(--color-secondary); }\n" +
+               "    .bg-accent { background-color: var(--color-accent); }\n" +
+               "  </style>\n" +
+               "</head>\n" +
+               "<body class=\"bg-gray-100 flex justify-center items-center min-h-screen p-5\">\n" +
+               "  <div class=\"w-card h-card bg-white rounded-xl shadow-lg overflow-hidden\">\n" +
+               "    <div class=\"p-8 h-full flex flex-col\">\n" +
+               "      <header class=\"mb-6\">\n" +
+               "        <div class=\"flex items-center justify-between\">\n" +
+               "          <div>\n" +
+               "            <h1 class=\"text-3xl font-bold text-primary text-clamp-2\">首破万亿美元，深圳服务贸易大有潜力</h1>\n" +
+               "            <p class=\"text-gray-500 mt-2\">深圳发布 | 2025年03月12日</p>\n" +
+               "          </div>\n" +
+               "          <div class=\"flex items-center justify-center bg-primary text-white rounded-full w-20 h-20\">\n" +
+               "            <i class=\"fas fa-globe text-4xl\"></i>\n" +
+               "          </div>\n" +
+               "        </div>\n" +
+               "      </header>\n" +
+               "      \n" +
+               "      <main class=\"flex-grow flex flex-col gap-6 overflow-hidden\">\n" +
+               "        <!-- 核心指标 -->\n" +
+               "        <div class=\"flex gap-6 justify-between mb-2\">\n" +
+               "          <div class=\"bg-blue-50 rounded-lg p-5 flex-1 flex items-center gap-4\">\n" +
+               "            <div class=\"text-primary text-3xl\"><i class=\"fas fa-chart-line\"></i></div>\n" +
+               "            <div>\n" +
+               "              <h3 class=\"font-bold text-lg\">2024年服务贸易进出口总额</h3>\n" +
+               "              <p class=\"text-2xl font-bold text-accent\">1402.4亿美元</p>\n" +
+               "              <p class=\"text-sm text-gray-600\">创历史新高</p>\n" +
+               "            </div>\n" +
+               "          </div>\n" +
+               "          <div class=\"bg-blue-50 rounded-lg p-5 flex-1 flex items-center gap-4\">\n" +
+               "            <div class=\"text-primary text-3xl\"><i class=\"fas fa-bullseye\"></i></div>\n" +
+               "            <div>\n" +
+               "              <h3 class=\"font-bold text-lg\">2025年服务贸易目标</h3>\n" +
+               "              <p class=\"text-2xl font-bold text-accent\">1500亿美元以上</p>\n" +
+               "              <p class=\"text-sm text-gray-600\">高质量发展行动计划</p>\n" +
+               "            </div>\n" +
+               "          </div>\n" +
+               "        </div>\n" +
+               "        \n" +
+               "        <!-- 行业现状 -->\n" +
+               "        <div class=\"flex gap-6 mb-2\">\n" +
+               "          <div class=\"bg-gray-50 rounded-lg p-5 flex-1\">\n" +
+               "            <div class=\"flex items-center gap-3 mb-3\">\n" +
+               "              <i class=\"fas fa-sitemap text-secondary text-xl\"></i>\n" +
+               "              <h3 class=\"font-bold text-lg\">现状与挑战</h3>\n" +
+               "            </div>\n" +
+               "            <ul class=\"space-y-2\">\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>深圳服务贸易排名全国第三，低于上海、北京</p>\n" +
+               "              </li>\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>服务贸易仅占全国外贸总额的14.6%</p>\n" +
+               "              </li>\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>知识密集型服务贸易占比仅38.5%</p>\n" +
+               "              </li>\n" +
+               "            </ul>\n" +
+               "          </div>\n" +
+               "          <div class=\"bg-gray-50 rounded-lg p-5 flex-1\">\n" +
+               "            <div class=\"flex items-center gap-3 mb-3\">\n" +
+               "              <i class=\"fas fa-lightbulb text-secondary text-xl\"></i>\n" +
+               "              <h3 class=\"font-bold text-lg\">深圳优势</h3>\n" +
+               "            </div>\n" +
+               "            <ul class=\"space-y-2\">\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>雄厚的数字经济、先进制造业基础</p>\n" +
+               "              </li>\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>华为、中兴、腾讯等企业国际竞争力强</p>\n" +
+               "              </li>\n" +
+               "              <li class=\"flex gap-2\">\n" +
+               "                <i class=\"fas fa-circle-check text-primary mt-1\"></i>\n" +
+               "                <p>跨境电商等数字订购贸易成为新动能</p>\n" +
+               "              </li>\n" +
+               "            </ul>\n" +
+               "          </div>\n" +
+               "        </div>\n" +
+               "        \n" +
+               "        <!-- 发展策略 -->\n" +
+               "        <div class=\"bg-gray-50 rounded-lg p-5\">\n" +
+               "          <div class=\"flex items-center gap-3 mb-3\">\n" +
+               "            <i class=\"fas fa-chess text-secondary text-xl\"></i>\n" +
+               "            <h3 class=\"font-bold text-lg\">深圳服务贸易发展策略</h3>\n" +
+               "          </div>\n" +
+               "          <div class=\"grid grid-cols-2 gap-4\">\n" +
+               "            <div class=\"flex gap-3 items-start\">\n" +
+               "              <div class=\"bg-primary text-white rounded-full p-2 flex items-center justify-center w-8 h-8\">\n" +
+               "                <i class=\"fas fa-door-open text-sm\"></i>\n" +
+               "              </div>\n" +
+               "              <div>\n" +
+               "                <h4 class=\"font-bold\">深化制度型开放</h4>\n" +
+               "                <p class=\"text-sm text-gray-600 text-clamp-2\">推动规则、规制、管理、标准等制度型开放，与时俱进优化各项举措</p>\n" +
+               "              </div>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex gap-3 items-start\">\n" +
+               "              <div class=\"bg-primary text-white rounded-full p-2 flex items-center justify-center w-8 h-8\">\n" +
+               "                <i class=\"fas fa-cubes text-sm\"></i>\n" +
+               "              </div>\n" +
+               "              <div>\n" +
+               "                <h4 class=\"font-bold\">平台建设</h4>\n" +
+               "                <p class=\"text-sm text-gray-600 text-clamp-2\">发挥自贸试验区、综合保税区等平台优势，争取国家级平台落地</p>\n" +
+               "              </div>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex gap-3 items-start\">\n" +
+               "              <div class=\"bg-primary text-white rounded-full p-2 flex items-center justify-center w-8 h-8\">\n" +
+               "                <i class=\"fas fa-users text-sm\"></i>\n" +
+               "              </div>\n" +
+               "              <div>\n" +
+               "                <h4 class=\"font-bold\">培育服务贸易主体</h4>\n" +
+               "                <p class=\"text-sm text-gray-600 text-clamp-2\">加快培育和引进服务贸易主体，支持企业和个体经营者开放发展</p>\n" +
+               "              </div>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex gap-3 items-start\">\n" +
+               "              <div class=\"bg-primary text-white rounded-full p-2 flex items-center justify-center w-8 h-8\">\n" +
+               "                <i class=\"fas fa-building-columns text-sm\"></i>\n" +
+               "              </div>\n" +
+               "              <div>\n" +
+               "                <h4 class=\"font-bold\">构建服务体系</h4>\n" +
+               "                <p class=\"text-sm text-gray-600 text-clamp-2\">构建便捷高效的金融服务体系，构建强大的跨境服务链</p>\n" +
+               "              </div>\n" +
+               "            </div>\n" +
+               "          </div>\n" +
+               "        </div>\n" +
+               "        \n" +
+               "        <!-- 未来机遇 -->\n" +
+               "        <div class=\"bg-blue-50 rounded-lg p-5\">\n" +
+               "          <div class=\"flex items-center gap-3 mb-3\">\n" +
+               "            <i class=\"fas fa-rocket text-accent text-xl\"></i>\n" +
+               "            <h3 class=\"font-bold text-lg\">未来发展机遇</h3>\n" +
+               "          </div>\n" +
+               "          <div class=\"flex gap-4\">\n" +
+               "            <div class=\"flex flex-col items-center bg-white rounded-lg p-3 flex-1\">\n" +
+               "              <i class=\"fas fa-robot text-accent text-2xl mb-2\"></i>\n" +
+               "              <p class=\"text-center text-sm font-bold\">人工智能</p>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex flex-col items-center bg-white rounded-lg p-3 flex-1\">\n" +
+               "              <i class=\"fas fa-atom text-accent text-2xl mb-2\"></i>\n" +
+               "              <p class=\"text-center text-sm font-bold\">量子科技</p>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex flex-col items-center bg-white rounded-lg p-3 flex-1\">\n" +
+               "              <i class=\"fas fa-cloud text-accent text-2xl mb-2\"></i>\n" +
+               "              <p class=\"text-center text-sm font-bold\">云计算</p>\n" +
+               "            </div>\n" +
+               "            <div class=\"flex flex-col items-center bg-white rounded-lg p-3 flex-1\">\n" +
+               "              <i class=\"fas fa-film text-accent text-2xl mb-2\"></i>\n" +
+               "              <p class=\"text-center text-sm font-bold\">文化创意</p>\n" +
+               "            </div>\n" +
+               "          </div>\n" +
+               "        </div>\n" +
+               "      </main>\n" +
+               "      \n" +
+               "      <footer class=\"mt-4 pt-4 border-t border-gray-100 text-sm text-gray-500 flex justify-between\">\n" +
+               "        <div>来源：深圳卫视深视新闻 | 作者：靳阳懿 李婷 赵畅</div>\n" +
+               "        <div>文章概念卡片 © 2025</div>\n" +
+               "      </footer>\n" +
+               "    </div>\n" +
+               "  </div>\n" +
+               "</body>\n" +
+               "</html>";
     }
 
     private Charset detectFileEncoding(File file) {
