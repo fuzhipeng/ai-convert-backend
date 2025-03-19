@@ -33,7 +33,7 @@ public class FileService {
         "pdf", "doc", "docx", "txt", "md", "json", "xml", "html", "csv"
     );
     
-    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    private static final long MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
     
     @Value("${file.upload.path}")
     private String uploadPath;
@@ -55,7 +55,7 @@ public class FileService {
         // 检查文件大小
         if (file.getSize() > MAX_FILE_SIZE) {
             logger.error("文件大小超过限制：{}", file.getOriginalFilename());
-            throw new IllegalArgumentException("文件大小不能超过50MB");
+            throw new IllegalArgumentException("文件大小不能超过1MB");
         }
         
         // 检查文件类型

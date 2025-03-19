@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 @Service
 public class ClaudeService {
 
@@ -32,6 +35,10 @@ public class ClaudeService {
         StandardCharsets.UTF_8,
         Charset.forName("GBK"),
         Charset.forName("GB2312"),
+        Charset.forName("GB18030"),
+        Charset.forName("Big5"),
+        StandardCharsets.UTF_16LE,
+        StandardCharsets.UTF_16BE,
         StandardCharsets.ISO_8859_1
     );
 
@@ -80,13 +87,60 @@ public class ClaudeService {
             throw new IllegalArgumentException("文件不存在");
         }
         
-        // 不再读取文件内容和调用Claude API，直接返回预定义的HTML
-        String html = getPredefinedHtml();
+        // 根据文件类型选择不同的处理方式
+        String content = null;
+        Charset usedCharset = null;
         
+        if ("pdf".equalsIgnoreCase(fileType)) {
+            content = extractPdfContent(file);
+            usedCharset = StandardCharsets.UTF_8;
+        } else if ("docx".equalsIgnoreCase(fileType)) {
+            content = extractDocxContent(file);
+            usedCharset = StandardCharsets.UTF_8;
+        } else {
+            // 处理文本文件，尝试不同的编码
+            Exception lastException = null;
+
+            // 首先尝试检测文件编码
+            Charset detectedCharset = detectFileEncoding(file);
+            if (detectedCharset != null) {
+                content = tryReadWithCharset(file, detectedCharset);
+                if (content != null) {
+                    usedCharset = detectedCharset;
+                    logger.info("使用检测到的编码 {} 成功读取文件", detectedCharset);
+                }
+            }
+
+            // 如果检测的编码不成功，尝试预定义的编码列表
+            if (content == null) {
+                for (Charset charset : CHARSETS) {
+                    content = tryReadWithCharset(file, charset);
+                    if (content != null) {
+                        usedCharset = charset;
+                        logger.info("使用编码 {} 成功读取文件", charset);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (content == null) {
+            logger.error("无法读取文件内容");
+            throw new IOException("无法读取文件内容");
+        }
+
+        logger.info("文件内容读取完成，总字符数：{}", content.length());
+
+        // 添加文件内容预览日志
+        String preview = content.length() > 500 ? content.substring(0, 500) + "..." : content;
+        logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
+
+        // 调用Claude API进行转换
+        String result = callClaudeApi(content, fileType);
+
         long endTime = System.currentTimeMillis();
-        logger.info("文件转换完成，耗时：{}ms", (endTime - startTime));
-        
-        return html;
+        logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
+        return result;
     }
     
     /**
@@ -308,38 +362,111 @@ public class ClaudeService {
 
     private Charset detectFileEncoding(File file) {
         try {
-            // 读取文件的前几个字节来检测编码
-            byte[] bytes = Files.readAllBytes(file.toPath());
+            // 读取文件的前4096字节来检测编码
+            byte[] bytes = new byte[4096];
+            try (FileInputStream fis = new FileInputStream(file)) {
+                int read = fis.read(bytes);
+                if (read > 0) {
+                    bytes = Arrays.copyOf(bytes, read);
+                }
+            }
+
+            // 检查BOM标记
             if (bytes.length >= 3 && bytes[0] == (byte)0xEF && bytes[1] == (byte)0xBB && bytes[2] == (byte)0xBF) {
-                return StandardCharsets.UTF_8; // UTF-8 with BOM
+                logger.debug("检测到UTF-8 BOM标记");
+                return StandardCharsets.UTF_8;
             }
             if (bytes.length >= 2 && bytes[0] == (byte)0xFE && bytes[1] == (byte)0xFF) {
-                return StandardCharsets.UTF_16BE; // UTF-16 Big Endian
+                logger.debug("检测到UTF-16BE BOM标记");
+                return StandardCharsets.UTF_16BE;
             }
             if (bytes.length >= 2 && bytes[0] == (byte)0xFF && bytes[1] == (byte)0xFE) {
-                return StandardCharsets.UTF_16LE; // UTF-16 Little Endian
+                logger.debug("检测到UTF-16LE BOM标记");
+                return StandardCharsets.UTF_16LE;
+            }
+
+            // 检测UTF-8编码
+            // UTF-8编码规则:
+            // 1字节: 0xxxxxxx
+            // 2字节: 110xxxxx 10xxxxxx
+            // 3字节: 1110xxxx 10xxxxxx 10xxxxxx
+            // 4字节: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+            int utf8Score = 0;
+            int totalBytes = 0;
+            
+            for (int i = 0; i < bytes.length; i++) {
+                totalBytes++;
+                int b = bytes[i] & 0xFF;
+                
+                if (b < 0x80) { // ASCII范围
+                    utf8Score++;
+                    continue;
+                }
+                
+                if ((b & 0xE0) == 0xC0) { // 2字节UTF-8序列开始
+                    if (i + 1 < bytes.length && (bytes[i + 1] & 0xC0) == 0x80) {
+                        utf8Score += 2;
+                        i++;
+                        continue;
+                    }
+                }
+                
+                if ((b & 0xF0) == 0xE0) { // 3字节UTF-8序列开始
+                    if (i + 2 < bytes.length && 
+                        (bytes[i + 1] & 0xC0) == 0x80 && 
+                        (bytes[i + 2] & 0xC0) == 0x80) {
+                        utf8Score += 3;
+                        i += 2;
+                        continue;
+                    }
+                }
+                
+                if ((b & 0xF8) == 0xF0) { // 4字节UTF-8序列开始
+                    if (i + 3 < bytes.length &&
+                        (bytes[i + 1] & 0xC0) == 0x80 &&
+                        (bytes[i + 2] & 0xC0) == 0x80 &&
+                        (bytes[i + 3] & 0xC0) == 0x80) {
+                        utf8Score += 4;
+                        i += 3;
+                        continue;
+                    }
+                }
             }
             
-            // 尝试检测中文编码
-            // 如果文件中包含大量的中文字符，很可能是GBK或GB2312
+            // 如果90%以上的字节符合UTF-8编码规则,认为是UTF-8
+            if (totalBytes > 0 && (double)utf8Score / totalBytes > 0.9) {
+                logger.debug("检测到UTF-8编码(无BOM) - 符合度: {:.2f}%", (double)utf8Score / totalBytes * 100);
+                return StandardCharsets.UTF_8;
+            }
+            
+            // 检测中文编码
             int gbkCount = 0;
             for (int i = 0; i < bytes.length - 1; i++) {
                 // GBK编码中，汉字的第一个字节的范围是0x81-0xFE
                 // 第二个字节的范围是0x40-0xFE
                 if ((bytes[i] & 0xFF) >= 0x81 && (bytes[i] & 0xFF) <= 0xFE) {
-                    if (i + 1 < bytes.length && (bytes[i+1] & 0xFF) >= 0x40 && (bytes[i+1] & 0xFF) <= 0xFE) {
+                    if (i + 1 < bytes.length && 
+                        (bytes[i+1] & 0xFF) >= 0x40 && 
+                        (bytes[i+1] & 0xFF) <= 0xFE) {
                         gbkCount++;
+                        i++; // 跳过下一个字节
                     }
                 }
             }
             
-            if (gbkCount > bytes.length / 10) { // 如果GBK特征字符占比超过10%
+            // 如果GBK特征字符占比超过20%,可能是GBK编码
+            if (bytes.length > 0 && (double)gbkCount * 2 / bytes.length > 0.2) {
+                logger.debug("检测到GBK编码 - 特征字符占比: {:.2f}%", (double)gbkCount * 2 / bytes.length * 100);
                 return Charset.forName("GBK");
             }
+
+            logger.debug("无法确定文件编码");
+            return null;
+            
         } catch (IOException e) {
             logger.warn("检测文件编码失败：{}", e.getMessage());
+            return null;
         }
-        return null;
     }
 
     private String tryReadWithCharset(File file, Charset charset) {
@@ -349,34 +476,56 @@ public class ClaudeService {
             StringBuilder content = new StringBuilder();
             String line;
             int lineCount = 0;
-            boolean hasValidContent = false;
+            int validLineCount = 0;
+            int totalChars = 0;
+            int validChars = 0;
             
-            // 读取前几行进行预览
-            while ((line = reader.readLine()) != null && lineCount < 5) {
+            // 读取所有内容进行分析
+            while ((line = reader.readLine()) != null) {
                 content.append(line).append("\n");
-                // 检查行内容是否包含有效字符
-                if (!line.trim().isEmpty() && !containsOnlySpecialChars(line)) {
-                    hasValidContent = true;
-                }
                 lineCount++;
+                totalChars += line.length();
+                
+                // 检查行内容是否有效
+                if (!line.trim().isEmpty()) {
+                    // 统计有效字符数
+                    for (char c : line.toCharArray()) {
+                        if (isValidChar(c)) {
+                            validChars++;
+                        }
+                    }
+                    if (hasValidContent(line)) {
+                        validLineCount++;
+                    }
+                }
+                
+                // 每100行记录一次日志
+                if (lineCount % 100 == 0) {
+                    logger.debug("已读取 {} 行, 有效行: {}, 总字符: {}, 有效字符: {}", 
+                        lineCount, validLineCount, totalChars, validChars);
+                }
             }
             
-            // 预览内容检查
-            String preview = content.toString();
-            logger.debug("使用编码 {} 读取前 {} 行预览：\n{}", charset, lineCount, preview);
+            // 计算有效内容比例
+            double validLineRatio = lineCount > 0 ? (double) validLineCount / lineCount : 0;
+            double validCharRatio = totalChars > 0 ? (double) validChars / totalChars : 0;
             
-            // 如果预览内容看起来是乱码，返回null
-            if (!hasValidContent || containsMostlyUnreadableChars(preview)) {
-                logger.debug("使用编码 {} 读取的内容可能是乱码，尝试下一个编码", charset);
+            logger.info("使用编码 {} 读取完成 - 总行数: {}, 有效行: {}, 有效行比例: {:.2f}%, 总字符: {}, 有效字符: {}, 有效字符比例: {:.2f}%",
+                charset, lineCount, validLineCount, validLineRatio * 100, totalChars, validChars, validCharRatio * 100);
+            
+            // 检查内容是否可能是乱码
+            if (validLineRatio < 0.3 || validCharRatio < 0.3) {
+                logger.debug("使用编码 {} 读取的内容可能是乱码 - 有效行比例: {:.2f}%, 有效字符比例: {:.2f}%", 
+                    charset, validLineRatio * 100, validCharRatio * 100);
                 return null;
             }
             
-            // 继续读取剩余内容
-            while ((line = reader.readLine()) != null) {
-                content.append(line).append("\n");
-            }
+            String result = content.toString();
+            // 记录内容预览
+            String preview = result.length() > 200 ? result.substring(0, 200) + "..." : result;
+            logger.debug("使用编码 {} 读取的内容预览:\n{}", charset, preview);
             
-            return content.toString();
+            return result;
             
         } catch (IOException e) {
             logger.debug("使用编码 {} 读取失败：{}", charset, e.getMessage());
@@ -384,24 +533,35 @@ public class ClaudeService {
         }
     }
     
-    private boolean containsOnlySpecialChars(String text) {
-        return text.chars().allMatch(ch -> !Character.isLetterOrDigit(ch));
+    private boolean isValidChar(char c) {
+        // 检查是否是可打印字符
+        if (Character.isWhitespace(c)) return true;
+        if (Character.isLetterOrDigit(c)) return true;
+        if (Character.isIdeographic(c)) return true; // 检查是否是表意文字(如中文)
+        if (isPunctuation(c)) return true;
+        return false;
     }
     
-    private boolean containsMostlyUnreadableChars(String text) {
-        if (text.isEmpty()) return true;
+    private boolean isPunctuation(char c) {
+        // 常见中英文标点符号
+        return (c >= 0x2000 && c <= 0x206F) || // 常用标点
+               (c >= 0x3000 && c <= 0x303F) || // 中文标点
+               (c >= 0xFF00 && c <= 0xFFEF) || // 全角字符
+               ",.!?;:\"'()[]{}+-*/=@#$%&|\\".indexOf(c) >= 0;
+    }
+    
+    private boolean hasValidContent(String line) {
+        if (line == null || line.trim().isEmpty()) return false;
         
-        int unreadableCount = 0;
-        for (char c : text.toCharArray()) {
-            // 检查是否是常见的不可读字符
-            if (c == '?' || c == '\uFFFF' || c == '\uFFFD' || 
-                (c >= '\u0000' && c <= '\u001F' && c != '\n' && c != '\r' && c != '\t')) {
-                unreadableCount++;
+        int validChars = 0;
+        for (char c : line.toCharArray()) {
+            if (isValidChar(c)) {
+                validChars++;
             }
         }
         
-        // 如果不可读字符占比超过20%，认为是乱码
-        return (double) unreadableCount / text.length() > 0.2;
+        // 如果有效字符占比超过50%,认为这行是有效的
+        return (double) validChars / line.length() > 0.5;
     }
 
     private String callClaudeApi(String content, String fileType) {
@@ -559,6 +719,52 @@ public class ClaudeService {
         } catch (Exception e) {
             logger.error("提取DOCX文件内容失败：{}", e.getMessage(), e);
             return "无法读取DOCX文件内容。错误信息：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 提取PDF文件的文本内容
+     */
+    private String extractPdfContent(File file) {
+        try (PDDocument document = PDDocument.load(file)) {
+            // 检查PDF是否加密
+            if (document.isEncrypted()) {
+                logger.error("PDF文件已加密,无法读取");
+                throw new RuntimeException("PDF文件已加密,请先解密");
+            }
+
+            // 获取页数
+            int pageCount = document.getNumberOfPages();
+            logger.info("PDF文件页数: {}", pageCount);
+            if (pageCount == 0) {
+                logger.error("PDF文件页数为0");
+                throw new RuntimeException("PDF文件页数为0");
+            }
+
+            PDFTextStripper stripper = new PDFTextStripper();
+            // 设置读取顺序为从左到右,从上到下
+            stripper.setSortByPosition(true);
+            // 设置读取所有页
+            stripper.setStartPage(1);
+            stripper.setEndPage(pageCount);
+
+            String content = stripper.getText(document);
+            
+            // 检查提取的内容
+            if (content == null || content.trim().isEmpty()) {
+                logger.error("提取的PDF内容为空");
+                throw new RuntimeException("提取的PDF内容为空,可能是扫描件需要OCR");
+            }
+
+            logger.info("成功提取PDF文件内容，页数：{}, 长度：{} 字符", pageCount, content.length());
+            // 记录内容预览
+            String preview = content.length() > 200 ? content.substring(0, 200) + "..." : content;
+            logger.debug("PDF内容预览:\n{}", preview);
+            
+            return content;
+        } catch (Exception e) {
+            logger.error("提取PDF文件内容失败：{}", e.getMessage(), e);
+            throw new RuntimeException("无法读取PDF文件内容：" + e.getMessage());
         }
     }
 } 
