@@ -14,10 +14,17 @@ spring:
       max-file-size: ${MAX_FILE_SIZE:10MB}
       max-request-size: ${MAX_REQUEST_SIZE:10MB}
 
+# Google OAuth配置
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID:1040336269348-svo55jc3tmk8eedsimqhqrbhk0amnnp7.apps.googleusercontent.com}
+    client-secret: ${GOOGLE_CLIENT_SECRET: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}
+
 # Claude API配置
 claude:
   api:
     url: ${CLAUDE_API_URL:https://openrouter.ai/api/v1/chat/completions}
+    key: ${CLAUDE_API_KEY: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-}
     model: ${CLAUDE_API_MODEL:anthropic/claude-3-sonnet}
     prompts:
       default: |
@@ -30,7 +37,6 @@ claude:
         **固定尺寸**：1080px × 800px，任何内容都不得超出此边界
         **安全区域**：实际内容区域为1020px × 740px（四周预留30px边距）
         **溢出处理**：宁可减少内容，也不允许任何元素溢出边界
-
         ## 设计任务
         创建一张严格遵守1080px×800px尺寸的网页风格卡片，呈现以下文章的核心内容。
 

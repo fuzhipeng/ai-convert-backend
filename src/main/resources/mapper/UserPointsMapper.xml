@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiconvert.mapper.UserPointsMapper">
+    
+    <resultMap id="UserPointsMap" type="com.aiconvert.entity.UserPoints">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="points" column="points"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    
+    <select id="selectByUserId" resultMap="UserPointsMap">
+        SELECT * FROM user_points WHERE user_id = #{userId}
+    </select>
+    
+    <insert id="insert" parameterType="com.aiconvert.entity.UserPoints" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_points (user_id, points, create_time, update_time)
+        VALUES (#{userId}, #{points}, #{createTime}, #{updateTime})
+    </insert>
+    
+    <update id="updateById" parameterType="com.aiconvert.entity.UserPoints">
+        UPDATE user_points
+        SET points = #{points},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+    
+</mapper> 
