@@ -102,11 +102,6 @@ public class AuthController {
             
             logger.info("解析的用户信息: googleId={}, email={}, name={}", googleId, email, name);
             
-            // 验证邮箱
-            if (email == null || !Boolean.TRUE.equals(tokenInfo.get("email_verified"))) {
-                logger.error("邮箱未验证: {}", email);
-                return ApiResponse.error(401, "邮箱未验证");
-            }
             
             // 创建或更新用户
             logger.info("准备创建或更新用户");
