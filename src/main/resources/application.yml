@@ -17,14 +17,14 @@ spring:
 # Google OAuth配置
 google:
   oauth:
-    client-id: ${GOOGLE_CLIENT_ID:1040336269348-svo55jc3tmk8eedsimqhqrbhk0amnnp7.apps.googleusercontent.com}
-    client-secret: ${GOOGLE_CLIENT_SECRET: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}
+    client-id: ${GOOGLE_CLIENT_ID:id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:secret}
 
 # Claude API配置
 claude:
   api:
     url: ${CLAUDE_API_URL:https://openrouter.ai/api/v1/chat/completions}
-    key: ${CLAUDE_API_KEY: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-}
+    key: ${CLAUDE_API_KEY:key}
     model: ${CLAUDE_API_MODEL:anthropic/claude-3-sonnet}
     prompts:
       default: |
