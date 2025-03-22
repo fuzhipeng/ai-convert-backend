@@ -51,11 +51,12 @@ public class UserService {
             user.setCreateTime(now);
             user.setUpdateTime(now);
             user.setStatus(1); // 正常状态
+            user.setPoints(30); // 初始30积分
             
             userMapper.insert(user);
             logger.info("创建新Google用户: {}", email);
             
-            // 初始化用户积分
+            // 为了兼容性，仍然初始化用户积分表
             UserPoints userPoints = new UserPoints();
             userPoints.setUserId(user.getId());
             userPoints.setPoints(30); // 初始30积分
@@ -82,7 +83,7 @@ public class UserService {
         
         Map<String, Object> result = new HashMap<>();
         result.put("user", user);
-        result.put("points", userPoints != null ? userPoints.getPoints() : 0);
+        result.put("points", user.getPoints() != null ? user.getPoints() : (userPoints != null ? userPoints.getPoints() : 0));
         result.put("isNewUser", isNewUser);
         
         return result;

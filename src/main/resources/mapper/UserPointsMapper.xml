@@ -26,4 +26,19 @@
         WHERE id = #{id}
     </update>
     
+    <!-- 通过googleId直接查询用户积分（不再需要联表查询） -->
+    <select id="selectPointsByGoogleId" resultType="java.util.HashMap">
+        SELECT 
+            id AS userId,
+            google_id AS googleId,
+            email,
+            name,
+            picture,
+            points
+        FROM 
+            user
+        WHERE 
+            google_id = #{googleId}
+        LIMIT 1
+    </select>
 </mapper> 

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `create_time` datetime NOT NULL,
   `update_time` datetime NOT NULL,
   `status` tinyint NOT NULL DEFAULT '1',
+  `points` int NOT NULL DEFAULT '30',
   PRIMARY KEY (`id`),
   UNIQUE KEY `google_id` (`google_id`),
   KEY `idx_google_id` (`google_id`)

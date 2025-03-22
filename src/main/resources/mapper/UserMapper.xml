@@ -11,6 +11,7 @@
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="status" column="status"/>
+        <result property="points" column="points"/>
     </resultMap>
     
     <select id="selectByGoogleId" resultMap="UserMap">
@@ -18,8 +19,8 @@
     </select>
     
     <insert id="insert" parameterType="com.aiconvert.entity.User" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO user (google_id, email, name, picture, create_time, update_time, status)
-        VALUES (#{googleId}, #{email}, #{name}, #{picture}, #{createTime}, #{updateTime}, #{status})
+        INSERT INTO user (google_id, email, name, picture, create_time, update_time, status, points)
+        VALUES (#{googleId}, #{email}, #{name}, #{picture}, #{createTime}, #{updateTime}, #{status}, #{points})
     </insert>
     
     <update id="updateById" parameterType="com.aiconvert.entity.User">
@@ -28,7 +29,8 @@
             name = #{name},
             picture = #{picture},
             update_time = #{updateTime},
-            status = #{status}
+            status = #{status},
+            points = #{points}
         WHERE id = #{id}
     </update>
     

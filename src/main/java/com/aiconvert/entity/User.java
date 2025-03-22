@@ -11,6 +11,7 @@ public class User {
     private Date createTime;
     private Date updateTime;
     private Integer status;
+    private Integer points;
     
     public Long getId() {
         return id;
@@ -74,5 +75,13 @@ public class User {
     
     public void setStatus(Integer status) {
         this.status = status;
+    }
+    
+    public Integer getPoints() {
+        return points;
+    }
+    
+    public void setPoints(Integer points) {
+        this.points = points;
     }
 } 
