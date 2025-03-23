@@ -112,7 +112,7 @@ public class PaymentServiceImpl implements PaymentService {
                 
                 // 创建订单记录，使用requestId而不是checkout_id
                 Order order = new Order();
-                order.setUserId(Long.valueOf(userId)); // 转换String类型的userId为Long类型
+                order.setUserId(userId); // 直接使用String类型的userId
                 // 临时设置订单ID，实际订单ID将通过webhook回调更新
                 order.setOrderId(requestId); // 使用requestId作为临时订单ID
                 order.setRequestId(requestId); // 保存requestId用于后续关联
@@ -494,7 +494,7 @@ public class PaymentServiceImpl implements PaymentService {
                         
                         // 确定用户ID
                         if (order != null) {
-                            userId = String.valueOf(order.getUserId());
+                            userId = order.getUserId();
                         } else if (subscription != null) {
                             userId = subscription.getUserId();
                         }
@@ -563,7 +563,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
         
         // 获取用户ID
-        String userId = order != null ? String.valueOf(order.getUserId()) : null;
+        String userId = order != null ? order.getUserId() : null;
         if (userId == null) {
             // 尝试从现有订阅中获取用户ID
             Subscription existingSubscription = subscriptionMapper.selectBySubscriptionId(subscriptionId);
@@ -684,7 +684,7 @@ public class PaymentServiceImpl implements PaymentService {
             String subscriptionId = "sub_" + UUID.randomUUID().toString().replace("-", "");
             
             // 检查用户是否已有订阅
-            Subscription existingSubscription = subscriptionMapper.selectByUserId(String.valueOf(order.getUserId()));
+            Subscription existingSubscription = subscriptionMapper.selectByUserId(order.getUserId());
             
             if (existingSubscription != null) {
                 // 更新现有订阅
@@ -695,7 +695,7 @@ public class PaymentServiceImpl implements PaymentService {
             } else {
                 // 创建新订阅
                 Subscription subscription = new Subscription();
-                subscription.setUserId(String.valueOf(order.getUserId()));
+                subscription.setUserId(order.getUserId());
                 subscription.setSubscriptionId(subscriptionId);
                 subscription.setPlanId(order.getProductId());
                 String productName = com.aiconvert.common.ProductPointsEnum.getPointsByProductName(subscription.getPlanId());

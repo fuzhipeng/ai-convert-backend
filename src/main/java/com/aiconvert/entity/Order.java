@@ -5,7 +5,7 @@ import java.util.Date;
 
 public class Order {
     private Long id;
-    private Long userId;
+    private String userId;
     private String orderId;        // 订单ID(系统生成)
     private String requestId;      // 请求ID(用于关联Creem请求)
     private String productId;      // 产品ID
@@ -29,11 +29,11 @@ public class Order {
         this.id = id;
     }
     
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
     
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
     
