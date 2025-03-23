@@ -258,3 +258,9 @@ logging:
   file:
     path: ${LOG_PATH:/app/logs}
     name: ${LOG_FILE:/app/logs/application.log} 
+
+    # 支付配置
+payment:
+  creem:
+    api-key: ${API-KEY}
+    api-url: ${API-URL}

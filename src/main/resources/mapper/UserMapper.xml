@@ -18,6 +18,10 @@
         SELECT * FROM user WHERE google_id = #{googleId}
     </select>
     
+    <select id="selectById" resultMap="UserMap">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+    
     <insert id="insert" parameterType="com.aiconvert.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user (google_id, email, name, picture, create_time, update_time, status, points)
         VALUES (#{googleId}, #{email}, #{name}, #{picture}, #{createTime}, #{updateTime}, #{status}, #{points})

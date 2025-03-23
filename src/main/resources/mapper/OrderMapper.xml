@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiconvert.mapper.OrderMapper">
+    
+    <resultMap id="OrderMap" type="com.aiconvert.entity.Order">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="requestId" column="request_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="variantId" column="variant_id"/>
+        <result property="productName" column="product_name"/>
+        <result property="amount" column="amount"/>
+        <result property="status" column="status"/>
+        <result property="checkoutUrl" column="checkout_url"/>
+        <result property="paymentMethod" column="payment_method"/>
+        <result property="metadata" column="metadata"/>
+        <result property="payTime" column="pay_time"/>
+        <result property="expireTime" column="expire_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    
+    <select id="selectByOrderId" resultMap="OrderMap">
+        SELECT * FROM orders WHERE order_id = #{orderId}
+    </select>
+    
+    <select id="selectByRequestId" resultMap="OrderMap">
+        SELECT * FROM orders WHERE request_id = #{requestId}
+    </select>
+    
+    <select id="selectByUserId" resultMap="OrderMap">
+        SELECT * FROM orders WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+    
+    <insert id="insert" parameterType="com.aiconvert.entity.Order" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (
+            user_id, order_id, request_id, product_id, variant_id, product_name, 
+            amount, status, checkout_url, payment_method, metadata, 
+            pay_time, expire_time, create_time, update_time
+        ) VALUES (
+            #{userId}, #{orderId}, #{requestId}, #{productId}, #{variantId}, #{productName}, 
+            #{amount}, #{status}, #{checkoutUrl}, #{paymentMethod}, #{metadata}, 
+            #{payTime}, #{expireTime}, #{createTime}, #{updateTime}
+        )
+    </insert>
+    
+    <update id="updateStatus">
+        UPDATE orders 
+        SET status = #{status},
+            update_time = NOW()
+        WHERE order_id = #{orderId}
+    </update>
+    
+    <update id="updateById" parameterType="com.aiconvert.entity.Order">
+        UPDATE orders
+        SET status = #{status},
+            order_id = #{orderId},
+            amount = #{amount},
+            payment_method = #{paymentMethod},
+            pay_time = #{payTime},
+            expire_time = #{expireTime},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+    
+</mapper> 

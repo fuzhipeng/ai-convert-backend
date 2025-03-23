@@ -6,6 +6,8 @@ public class UserPoints {
     private Long id;
     private Long userId;
     private Integer points;
+    private Integer pointsChange;  // 积分变动值
+    private String remark;         // 备注，说明积分变动原因
     private Date createTime;
     private Date updateTime;
     
@@ -31,6 +33,22 @@ public class UserPoints {
     
     public void setPoints(Integer points) {
         this.points = points;
+    }
+    
+    public Integer getPointsChange() {
+        return pointsChange;
+    }
+    
+    public void setPointsChange(Integer pointsChange) {
+        this.pointsChange = pointsChange;
+    }
+    
+    public String getRemark() {
+        return remark;
+    }
+    
+    public void setRemark(String remark) {
+        this.remark = remark;
     }
     
     public Date getCreateTime() {
