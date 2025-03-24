@@ -4,10 +4,10 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO file_upload (
             original_filename, file_path, file_size, file_type, 
-            upload_time, status
+            upload_time, status, user_id
         ) VALUES (
             #{originalFilename}, #{filePath}, #{fileSize}, #{fileType}, 
-            #{uploadTime}, #{status}
+            #{uploadTime}, #{status}, #{userId}
         )
     </insert>
 

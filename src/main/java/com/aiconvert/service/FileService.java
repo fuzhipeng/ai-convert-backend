@@ -2,6 +2,7 @@ package com.aiconvert.service;
 
 import com.aiconvert.entity.FileUpload;
 import com.aiconvert.entity.ConversionRecord;
+import com.aiconvert.entity.User;
 import com.aiconvert.mapper.FileUploadMapper;
 import com.aiconvert.mapper.ConversionRecordMapper;
 import com.aiconvert.utils.FileUtils;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
@@ -48,10 +50,13 @@ public class FileService {
     private ClaudeService claudeService;
     
     @Autowired
+    private UserService userService;
+    
+    @Autowired
     @Qualifier("conversionExecutor")
     private Executor conversionExecutor;
 
-    public FileUpload uploadFile(MultipartFile file) throws Exception {
+    public FileUpload uploadFile(MultipartFile file, String userId) throws Exception {
         // 检查文件大小
         if (file.getSize() > MAX_FILE_SIZE) {
             logger.error("文件大小超过限制：{}", file.getOriginalFilename());
@@ -64,6 +69,19 @@ public class FileService {
         if (!SUPPORTED_FILE_TYPES.contains(fileType)) {
             logger.error("不支持的文件类型：{}", fileType);
             throw new IllegalArgumentException("不支持的文件类型：" + fileType);
+        }
+
+        // 检查用户积分
+        User user = userService.findByGoogleId(userId);
+        if (user == null) {
+            logger.error("用户不存在：userId={}", userId);
+            throw new IllegalArgumentException("用户不存在");
+        }
+        
+        Integer points = user.getPoints();
+        if (points == null || points < 10) {
+            logger.error("用户积分不足：userId={}, points={}", userId, points);
+            throw new IllegalArgumentException("用户积分不足10分，无法上传文件");
         }
 
         logger.info("开始上传文件：{}", originalFilename);
@@ -79,6 +97,7 @@ public class FileService {
         fileUpload.setFileType(fileType);
         fileUpload.setUploadTime(new Date());
         fileUpload.setStatus(0); // 待转换
+        fileUpload.setUserId(userId); // 设置用户ID
         
         fileUploadMapper.insert(fileUpload);
         logger.info("文件上传成功：{}", originalFilename);
@@ -90,6 +109,7 @@ public class FileService {
     }
 
     @Async("conversionExecutor")
+    @Transactional
     protected void startConversion(FileUpload fileUpload) {
         logger.info("开始转换文件：{}", fileUpload.getOriginalFilename());
         
@@ -115,6 +135,13 @@ public class FileService {
 
             // 更新文件状态为转换成功
             fileUploadMapper.updateStatus(fileUpload.getId(), 2);
+            
+            // 扣除用户积分
+            if (fileUpload.getUserId() != null) {
+                userService.updateUserPoints(fileUpload.getUserId(), -10, "文件转换扣除积分");
+                logger.info("用户积分扣除成功：userId={}, points=-10", fileUpload.getUserId());
+            }
+            
             logger.info("文件转换成功：{}", fileUpload.getOriginalFilename());
         } catch (Exception e) {
             // 转换失败

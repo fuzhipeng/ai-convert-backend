@@ -14,6 +14,7 @@ public class FileUpload {
     private Integer status;
     private Date createTime;
     private Date updateTime;
+    private String userId;
 
     public Long getId() {
         return id;
@@ -85,5 +86,13 @@ public class FileUpload {
 
     public void setUpdateTime(Date updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 } 

@@ -16,8 +16,10 @@ public class FileController {
     private FileService fileService;
 
     @PostMapping("/upload")
-    public ApiResponse<FileUpload> uploadFile(@RequestParam("file") MultipartFile file) throws Exception {
-        FileUpload fileUpload = fileService.uploadFile(file);
+    public ApiResponse<FileUpload> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") String userId) throws Exception {
+        FileUpload fileUpload = fileService.uploadFile(file, userId);
         return ApiResponse.success(fileUpload);
     }
 
