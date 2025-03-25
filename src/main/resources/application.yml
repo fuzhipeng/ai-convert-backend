@@ -25,7 +25,7 @@ claude:
   api:
     url: ${CLAUDE_API_URL:https://openrouter.ai/api/v1/chat/completions}
     key: ${CLAUDE_API_KEY:key}
-    model: ${CLAUDE_API_MODEL:anthropic/claude-3-sonnet}
+    model: ${CLAUDE_API_MODEL:deepseek/deepseek-chat-v3-0324} 
     prompts:
       default: |
         # 文章概念卡片设计师提示词
@@ -227,10 +227,7 @@ claude:
         只需要完整的HTML代码，不需要任何说明（必须包含所有必要的HTML、CSS和内联JavaScript）
 
         ## 文章内容 
-
-        <CURRENT_CURSOR_POSITION>
-        [用户输入的需要总结的文章内容]
-     
+       
 
 # 文件存储配置
 storage:
