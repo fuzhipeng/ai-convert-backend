@@ -23,6 +23,15 @@ public class FileController {
         return ApiResponse.success(fileUpload);
     }
 
+    
+    @PostMapping("/uploadData")
+    public ApiResponse<FileUpload> uploaduploadDataFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") String userId) throws Exception {
+        FileUpload fileUpload = fileService.uploadDataFile(file, userId);
+        return ApiResponse.success(fileUpload);
+    }
+
     @GetMapping("/conversion/{fileId}")
     public ApiResponse<ConversionRecord> getConversionResult(@PathVariable Long fileId) {
         ConversionRecord record = fileService.getConversionResult(fileId);

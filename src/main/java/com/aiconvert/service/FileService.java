@@ -108,6 +108,110 @@ public class FileService {
         return fileUpload;
     }
 
+    public FileUpload uploadDataFile(MultipartFile file, String userId) throws Exception {
+        // 检查文件大小
+        if (file.getSize() > MAX_FILE_SIZE) {
+            logger.error("文件大小超过限制：{}", file.getOriginalFilename());
+            throw new IllegalArgumentException("文件大小不能超过1MB");
+        }
+        
+        // 检查文件类型
+        String originalFilename = file.getOriginalFilename();
+        String fileType = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!SUPPORTED_FILE_TYPES.contains(fileType)) {
+            logger.error("不支持的文件类型：{}", fileType);
+            throw new IllegalArgumentException("不支持的文件类型：" + fileType);
+        }
+
+        // 检查用户积分
+        User user = userService.findByGoogleId(userId);
+        if (user == null) {
+            logger.error("用户不存在：userId={}", userId);
+            throw new IllegalArgumentException("用户不存在");
+        }
+        
+        Integer points = user.getPoints();
+        if (points == null || points < 10) {
+            logger.error("用户积分不足：userId={}, points={}", userId, points);
+            throw new IllegalArgumentException("用户积分不足10分，无法上传文件");
+        }
+
+        logger.info("开始上传文件：{}", originalFilename);
+        
+        // 保存文件
+        String filePath = FileUtils.saveFile(file, uploadPath);
+        
+        // 保存文件记录
+        FileUpload fileUpload = new FileUpload();
+        fileUpload.setOriginalFilename(originalFilename);
+        fileUpload.setFilePath(filePath);
+        fileUpload.setFileSize(file.getSize());
+        fileUpload.setFileType(fileType);
+        fileUpload.setUploadTime(new Date());
+        fileUpload.setStatus(0); // 待转换
+        fileUpload.setUserId(userId); // 设置用户ID
+        
+        fileUploadMapper.insert(fileUpload);
+        logger.info("文件上传成功：{}", originalFilename);
+
+        // 异步开始转换
+        startDataConversion(fileUpload);
+
+        return fileUpload;
+    }
+
+
+    @Async("conversionExecutor")
+    @Transactional
+    protected void startDataConversion(FileUpload fileUpload) {
+        logger.info("开始转换文件：{}", fileUpload.getOriginalFilename());
+        
+        // 更新文件状态为转换中
+        fileUpload.setStatus(1);
+        fileUploadMapper.updateStatus(fileUpload.getId(), 1);
+
+        // 创建转换记录
+        ConversionRecord record = new ConversionRecord();
+        record.setFileId(fileUpload.getId());
+        record.setStartTime(new Date());
+        record.setStatus(1); // 设置初始状态为转换中
+        conversionRecordMapper.insert(record);
+
+        try {
+            String htmlContent = claudeService.convertToDataHtml(fileUpload.getFilePath(), fileUpload.getFileType());
+            //处理html内容
+            htmlContent = htmlContent.replace("```html", "").replace("```", "");
+
+            // 更新转换记录
+            record.setHtmlContent(htmlContent);
+            record.setEndTime(new Date());
+            record.setStatus(2); // 设置状态为转换成功
+            conversionRecordMapper.update(record);
+
+            // 更新文件状态为转换成功
+            fileUploadMapper.updateStatus(fileUpload.getId(), 2);
+            
+            // 扣除用户积分
+            if (fileUpload.getUserId() != null) {
+                userService.updateUserPoints(fileUpload.getUserId(), -10, "文件转换扣除积分");
+                logger.info("用户积分扣除成功：userId={}, points=-10", fileUpload.getUserId());
+            }
+            
+            logger.info("文件转换成功：{}", fileUpload.getOriginalFilename());
+        } catch (Exception e) {
+            // 转换失败
+            logger.error("文件转换失败：{}", fileUpload.getOriginalFilename(), e);
+            record.setErrorMessage(e.getMessage());
+            record.setEndTime(new Date());
+            record.setStatus(3); // 设置状态为转换失败
+            conversionRecordMapper.update(record);
+            
+            fileUploadMapper.updateStatus(fileUpload.getId(), 3);
+        }
+    }
+
+
+
     @Async("conversionExecutor")
     @Transactional
     protected void startConversion(FileUpload fileUpload) {
@@ -126,7 +230,8 @@ public class FileService {
 
         try {
             String htmlContent = claudeService.convertToHtml(fileUpload.getFilePath(), fileUpload.getFileType());
-            
+            htmlContent = htmlContent.replace("```html", "").replace("```", "");
+
             // 更新转换记录
             record.setHtmlContent(htmlContent);
             record.setEndTime(new Date());
