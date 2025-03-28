@@ -57,6 +57,9 @@ public class ClaudeService {
     @Value("${claude.api.data_prompts.default}")
     private String defaultDataPrompt;
 
+    @Value("${claude.api.user_prompts.default}")
+    private String defaultUserPrompt;
+
     @Value("${claude.api.prompts.pdf:${claude.api.prompts.default}}")
     private String pdfPrompt;
 
@@ -152,7 +155,7 @@ public class ClaudeService {
      * 将文件内容转换为HTML
      * 修改为直接返回预定义的HTML，不调用Claude API
      */
-    public String convertToDataHtml(String filePath, String fileType) throws Exception {
+    public String convertToDataHtml(String filePath, String fileType,String prompt) throws Exception {
         logger.info("开始转换文件：{}, 文件类型：{}", filePath, fileType);
         long startTime = System.currentTimeMillis();
         
@@ -211,7 +214,78 @@ public class ClaudeService {
         logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
 
         // 调用Claude API进行转换
-        String result = callDataClaudeApi(content, fileType);
+        String result = callDataClaudeApi(content, fileType, prompt);
+
+        long endTime = System.currentTimeMillis();
+        logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
+        return result;
+    }
+
+
+     /**
+     * 将文件内容转换为HTML
+     * 修改为直接返回预定义的HTML，不调用Claude API
+     */
+    public String convertToUserHtml(String filePath, String fileType) throws Exception {
+        logger.info("开始转换文件：{}, 文件类型：{}", filePath, fileType);
+        long startTime = System.currentTimeMillis();
+        
+        File file = new File(filePath);
+        if (!file.exists()) {
+            logger.error("文件不存在：{}", filePath);
+            throw new IllegalArgumentException("文件不存在");
+        }
+        
+        // 根据文件类型选择不同的处理方式
+        String content = null;
+        Charset usedCharset = null;
+        
+        if ("pdf".equalsIgnoreCase(fileType)) {
+            content = extractPdfContent(file);
+            usedCharset = StandardCharsets.UTF_8;
+        } else if ("docx".equalsIgnoreCase(fileType)) {
+            content = extractDocxContent(file);
+            usedCharset = StandardCharsets.UTF_8;
+        } else {
+            // 处理文本文件，尝试不同的编码
+            Exception lastException = null;
+
+            // 首先尝试检测文件编码
+            Charset detectedCharset = detectFileEncoding(file);
+            if (detectedCharset != null) {
+                content = tryReadWithCharset(file, detectedCharset);
+                if (content != null) {
+                    usedCharset = detectedCharset;
+                    logger.info("使用检测到的编码 {} 成功读取文件", detectedCharset);
+                }
+            }
+
+            // 如果检测的编码不成功，尝试预定义的编码列表
+            if (content == null) {
+                for (Charset charset : CHARSETS) {
+                    content = tryReadWithCharset(file, charset);
+                    if (content != null) {
+                        usedCharset = charset;
+                        logger.info("使用编码 {} 成功读取文件", charset);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (content == null) {
+            logger.error("无法读取文件内容");
+            throw new IOException("无法读取文件内容");
+        }
+
+        logger.info("文件内容读取完成，总字符数：{}", content.length());
+
+        // 添加文件内容预览日志
+        String preview = content.length() > 500 ? content.substring(0, 500) + "..." : content;
+        logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
+
+        // 调用Claude API进行转换
+        String result = callDataClaudeApi(content, fileType, defaultUserPrompt);
 
         long endTime = System.currentTimeMillis();
         logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
@@ -758,11 +832,8 @@ public class ClaudeService {
      * @param fileType
      * @return
      */
-    private String callDataClaudeApi(String content, String fileType) {
+    private String callDataClaudeApi(String content, String fileType, String prompt) {
         long startTime = System.currentTimeMillis();
-        
-        // 获取对应文件类型的提示词
-        String prompt = defaultDataPrompt;
         
         // 记录完整的提示词和内容（为了调试）
         logger.debug("完整的提示词和内容：\n---提示词开始---\n{}\n---提示词结束---\n---内容开始---\n{}\n---内容结束---", 
