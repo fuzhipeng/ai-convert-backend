@@ -2,6 +2,7 @@ package com.aiconvert.service;
 
 import com.aiconvert.entity.FileUpload;
 import com.aiconvert.entity.ConversionRecord;
+import com.aiconvert.entity.Result;
 import com.aiconvert.entity.User;
 import com.aiconvert.mapper.FileUploadMapper;
 import com.aiconvert.mapper.ConversionRecordMapper;
@@ -106,6 +107,16 @@ public class FileService {
         startConversion(fileUpload);
 
         return fileUpload;
+    }
+
+
+    public Result uploadStringData(String dataString,String prompt) throws Exception {
+        String htmlContent = claudeService.convertToStringHtml(dataString, prompt);
+          //处理html内容
+          htmlContent = htmlContent.replace("```html", "").replace("```", "");
+          Result result = new Result();
+          result.setResultString(htmlContent);
+        return result;
     }
 
     public FileUpload uploadDataFile(MultipartFile file, String userId,String prompt) throws Exception {

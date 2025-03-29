@@ -149,7 +149,17 @@ public class ClaudeService {
         return result;
     }
     
+ /**
+     * 将文件内容转换为HTML
+     * 修改为直接返回预定义的HTML，不调用Claude API
+     */
+    public String convertToStringHtml(String content, String prompt) throws Exception {
+        // 调用Claude API进行转换
+        String result = callDataClaudeApi(content, prompt);
 
+        return result;
+    }
+    
 
      /**
      * 将文件内容转换为HTML
@@ -214,7 +224,7 @@ public class ClaudeService {
         logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
 
         // 调用Claude API进行转换
-        String result = callDataClaudeApi(content, fileType, prompt);
+        String result = callDataClaudeApi(content, prompt);
 
         long endTime = System.currentTimeMillis();
         logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
@@ -285,7 +295,7 @@ public class ClaudeService {
         logger.info("文件内容预览：\n---内容开始---\n{}\n---内容结束---", preview);
 
         // 调用Claude API进行转换
-        String result = callDataClaudeApi(content, fileType, defaultUserPrompt);
+        String result = callDataClaudeApi(content, defaultUserPrompt);
 
         long endTime = System.currentTimeMillis();
         logger.info("文件转换完成：{}, 总耗时：{} ms", filePath, (endTime - startTime));
@@ -832,7 +842,7 @@ public class ClaudeService {
      * @param fileType
      * @return
      */
-    private String callDataClaudeApi(String content, String fileType, String prompt) {
+    private String callDataClaudeApi(String content, String prompt) {
         long startTime = System.currentTimeMillis();
         
         // 记录完整的提示词和内容（为了调试）
@@ -885,8 +895,8 @@ public class ClaudeService {
         logger.debug("API完整请求体：{}", requestBody);
 
         // 记录请求信息
-        logger.info("准备调用 Claude API - URL: {}, Model: {}, 文件类型: {}, 内容长度: {} 字符", 
-            apiUrl, model, fileType, content.length());
+        logger.info("准备调用 Claude API - URL: {}, Model: {}, 内容长度: {} 字符", 
+            apiUrl, model, content.length());
 
         try {
             // 发送请求

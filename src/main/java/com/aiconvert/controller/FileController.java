@@ -4,6 +4,7 @@ import com.aiconvert.common.ApiResponse;
 import com.aiconvert.entity.FileUpload;
 import com.aiconvert.entity.ConversionRecord;
 import com.aiconvert.service.FileService;
+import com.aiconvert.entity.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,9 @@ public class FileController {
     @Value("${claude.api.user_prompts.default}")
     private String defaultUserPrompt;
 
+    @Value("${claude.api.ui_prompts.default}")
+    private String defaultUiPrompt;
+    
 
     @PostMapping("/upload")
     public ApiResponse<FileUpload> uploadFile(
@@ -51,6 +55,24 @@ public class FileController {
         FileUpload fileUpload = fileService.uploadDataFile(file, userId,defaultUserPrompt);
         return ApiResponse.success(fileUpload);
     }
+
+
+    
+    @PostMapping("/stringUiData")
+    public ApiResponse<Result> stringUiData(
+            @RequestParam("content") String dataString) throws Exception {
+            Result  result = fileService.uploadStringData(dataString,defaultUiPrompt);
+        return ApiResponse.success(result);
+    }
+ 
+    @PostMapping("/uploadUiData")
+    public ApiResponse<FileUpload> uploaduploadUiFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") String userId) throws Exception {
+        FileUpload fileUpload = fileService.uploadDataFile(file, userId,defaultUiPrompt);
+        return ApiResponse.success(fileUpload);
+    }
+    
 
     @GetMapping("/conversion/{fileId}")
     public ApiResponse<ConversionRecord> getConversionResult(@PathVariable Long fileId) {
