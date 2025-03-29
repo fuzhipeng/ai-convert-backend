@@ -29,6 +29,9 @@ public class FileController {
 
     @Value("${claude.api.ui_prompts.default}")
     private String defaultUiPrompt;
+
+    @Value("${claude.api.front_prompts.default}")
+    private String defaultFrontPrompt;
     
 
     @PostMapping("/upload")
@@ -64,6 +67,13 @@ public class FileController {
             Result  result = fileService.uploadStringData(dataString,defaultUiPrompt);
         return ApiResponse.success(result);
     }
+
+    @PostMapping("/stringFrontData")
+    public ApiResponse<Result> stringFrontData(
+            @RequestParam("content") String dataString) throws Exception {
+        Result  result = fileService.uploadStringData(dataString,defaultFrontPrompt);
+        return ApiResponse.success(result);
+    }
  
     @PostMapping("/uploadUiData")
     public ApiResponse<FileUpload> uploaduploadUiFile(
@@ -73,6 +83,9 @@ public class FileController {
         return ApiResponse.success(fileUpload);
     }
     
+
+
+
 
     @GetMapping("/conversion/{fileId}")
     public ApiResponse<ConversionRecord> getConversionResult(@PathVariable Long fileId) {
