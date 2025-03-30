@@ -12,11 +12,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +73,12 @@ public class ClaudeService {
 
     @Value("${claude.api.prompts.md:${claude.api.prompts.default}}")
     private String mdPrompt;
+
+    @Value("${claude.api.front_prompts.default}")
+    private String defaultFrontPrompt;
+
+    @Value("${claude.api.photo_prompts.default}")
+    private String defaultPhotoPrompt;
 
     private final RestTemplate restTemplate;
 
@@ -856,13 +864,6 @@ public class ClaudeService {
         headers.set("HTTP-Referer", "https://aiconvert.app");
         headers.set("X-Title", "AI Document Converter");
         
-        // 记录请求头信息
-        logger.debug("API请求头信息：Content-Type={}, Authorization=Bearer {}..., HTTP-Referer={}, X-Title={}", 
-            headers.getContentType(), 
-            apiKey.substring(0, Math.min(10, apiKey.length())) + "...", 
-            headers.getFirst("HTTP-Referer"), 
-            headers.getFirst("X-Title"));
-
         // 准备请求体
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
@@ -1043,6 +1044,200 @@ public class ClaudeService {
         } catch (Exception e) {
             logger.error("提取PDF文件内容失败：{}", e.getMessage(), e);
             throw new RuntimeException("无法读取PDF文件内容：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理图片并返回解析结果
+     */
+    public String processImage(MultipartFile file, String prompt) throws Exception {
+        long startTime = System.currentTimeMillis();
+
+        // 读取图片文件内容
+        byte[] imageBytes = file.getBytes();
+        
+        // 将图片转换为base64
+        String base64Image = java.util.Base64.getEncoder().encodeToString(imageBytes);
+        
+        // 调用Claude API进行图片处理
+        String result = callImageClaudeApi(base64Image, prompt);
+
+        long endTime = System.currentTimeMillis();
+        logger.info("图片处理完成：{}, 总耗时：{} ms", (endTime - startTime));
+        return result;
+    }
+
+    /**
+     * 调用Claude API处理图片
+     */
+    private String callImageClaudeApi(String base64Image, String prompt) {
+        long startTime = System.currentTimeMillis();
+        
+        // 准备请求头
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("HTTP-Referer", "https://aiconvert.app");
+        headers.set("X-Title", "AI Document Converter");
+        
+        // 记录请求头信息
+        logger.info("API请求头信息：Content-Type={}, Authorization=Bearer {}..., HTTP-Referer={}, X-Title={}", 
+            headers.getContentType(), 
+            apiKey.substring(0, Math.min(10, apiKey.length())) + "...", 
+            headers.getFirst("HTTP-Referer"), 
+            headers.getFirst("X-Title"));
+        
+        // 使用OpenAI兼容的格式
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "mistralai/mistral-small-3.1-24b-instruct");
+        requestBody.put("max_tokens", 1000);
+        
+        // 系统消息
+        Map<String, String> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", prompt);
+        
+        // 用户消息
+        Map<String, Object> userMessage = new HashMap<>();
+        userMessage.put("role", "user");
+        
+        // 创建带有文本和图片的内容列表
+        List<Object> contentList = new ArrayList<>();
+        
+        // 添加文本内容
+        Map<String, String> textContent = new HashMap<>();
+        textContent.put("type", "text");
+        textContent.put("text", "请分析这张图片并提供详细信息：");
+        contentList.add(textContent);
+        
+        // 添加图片内容 - OpenAI兼容格式
+        Map<String, String> imageContent = new HashMap<>();
+        imageContent.put("type", "image_url");
+        
+        // 确保使用正确的MIME类型
+        String imageUrl = "data:image/jpeg;base64," + base64Image;
+        imageContent.put("image_url", imageUrl);
+        
+        // 记录图片信息
+        String base64Preview = base64Image.substring(0, Math.min(100, base64Image.length())) + "...";
+        logger.info("图片数据预览：{}", base64Preview);
+        logger.info("图片数据长度：{} 字符", base64Image.length());
+        
+        contentList.add(imageContent);
+        userMessage.put("content", contentList);
+        
+        // 添加所有消息到请求
+        List<Object> messages = new ArrayList<>();
+        messages.add(systemMessage);
+        messages.add(userMessage);
+        requestBody.put("messages", messages);
+        
+        // 详细日志
+        logger.info("调用API处理图片: URL={}, 模型={}, max_tokens={}", 
+            apiUrl, model, requestBody.get("max_tokens"));
+        logger.info("系统提示词长度: {} 字符", prompt.length());
+        
+        // 创建用于日志记录的请求体副本，去除大型Base64数据
+        Map<String, Object> loggableRequestBody = new HashMap<>(requestBody);
+        if (loggableRequestBody.containsKey("messages")) {
+            List<Object> loggableMessages = new ArrayList<>();
+            for (Object message : messages) {
+                if (message instanceof Map) {
+                    Map<String, Object> messageMap = new HashMap<>((Map<String, Object>) message);
+                    if ("user".equals(messageMap.get("role")) && messageMap.get("content") instanceof List) {
+                        List<Object> contentItems = (List<Object>) messageMap.get("content");
+                        List<Object> loggableContentItems = new ArrayList<>();
+                        
+                        for (Object item : contentItems) {
+                            if (item instanceof Map && ((Map) item).containsKey("type") 
+                                && "image_url".equals(((Map) item).get("type"))) {
+                                Map<String, String> loggableImageItem = new HashMap<>();
+                                loggableImageItem.put("type", "image_url");
+                                loggableImageItem.put("image_url", "[BASE64_IMAGE_DATA_OMITTED]");
+                                loggableContentItems.add(loggableImageItem);
+                            } else {
+                                loggableContentItems.add(item);
+                            }
+                        }
+                        messageMap.put("content", loggableContentItems);
+                    }
+                    loggableMessages.add(messageMap);
+                } else {
+                    loggableMessages.add(message);
+                }
+            }
+            loggableRequestBody.put("messages", loggableMessages);
+        }
+        logger.info("请求体结构: {}", loggableRequestBody);
+        
+        try {
+            // 发送请求
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            
+            // 记录开始发送请求的时间
+            logger.info("开始发送图片分析请求: {}", new java.util.Date());
+            
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, request, Map.class);
+            
+            long endTime = System.currentTimeMillis();
+            logger.info("API调用完成: {} ms, 状态: {}", (endTime - startTime), response.getStatusCode());
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map responseBody = response.getBody();
+                
+                // 记录完整响应（不包含敏感信息）
+                logger.info("API响应状态：{}, 响应体大小：约{}字节", 
+                    response.getStatusCode(), 
+                    responseBody.toString().length());
+                logger.debug("完整响应体: {}", responseBody);
+                
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    Map<String, String> message = (Map<String, String>) choice.get("message");
+                    
+                    if (message != null && message.containsKey("content")) {
+                        String content = message.get("content");
+                        logger.info("成功获取内容，长度: {} 字符", content.length());
+                        
+                        // 内容预览
+                        String contentPreview = content.length() > 500 ? 
+                            content.substring(0, 500) + "..." : content;
+                        logger.info("内容预览: \n{}", contentPreview);
+                        
+                        // 检查是否包含无法处理图片的提示
+                        if (content.contains("无法") && (content.contains("看到图片") || 
+                                                       content.contains("查看图片") || 
+                                                       content.contains("访问图片"))) {
+                            logger.warn("检测到API返回表明模型无法处理图片，可能存在兼容性问题");
+                        }
+                        
+                        // 记录token使用情况
+                        if (responseBody.containsKey("usage")) {
+                            Map<String, Object> usage = (Map<String, Object>) responseBody.get("usage");
+                            logger.info("Token使用情况 - 输入: {}, 输出: {}, 总计: {}", 
+                                usage.get("prompt_tokens"), 
+                                usage.get("completion_tokens"), 
+                                usage.get("total_tokens"));
+                        }
+                        
+                        return content;
+                    } else {
+                        logger.error("API响应消息中缺少content字段: {}", message);
+                        throw new RuntimeException("API响应格式错误：消息中缺少content字段");
+                    }
+                } else {
+                    logger.error("API响应中没有choices字段或为空: {}", responseBody);
+                    throw new RuntimeException("API响应格式错误：缺少choices字段");
+                }
+            } else {
+                logger.error("API响应状态异常: {}, 响应体: {}", 
+                    response.getStatusCode(), response.getBody());
+                throw new RuntimeException("API调用失败: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            logger.error("API调用过程发生异常: {}", e.getMessage(), e);
+            throw new RuntimeException("图片分析API调用异常: " + e.getMessage());
         }
     }
 } 

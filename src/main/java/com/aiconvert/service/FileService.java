@@ -33,7 +33,7 @@ public class FileService {
     private static final Logger logger = LoggerFactory.getLogger(FileService.class);
     
     private static final List<String> SUPPORTED_FILE_TYPES = Arrays.asList(
-        "pdf", "doc", "docx", "txt", "md", "json", "xml", "html", "csv"
+        "pdf", "doc", "docx", "txt", "md", "json", "xml", "html", "csv", "jpg", "jpeg", "png"
     );
     
     private static final long MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
@@ -472,5 +472,26 @@ public class FileService {
 
         fileUpload.setStatus(3); // 转换失败
         fileUploadMapper.updateById(fileUpload);
+    }
+
+    public Result processImageFile(MultipartFile file, String prompt) throws Exception {
+        // 检查文件类型
+        String originalFilename = file.getOriginalFilename();
+        String fileType = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!Arrays.asList("jpg", "jpeg", "png").contains(fileType)) {
+            logger.error("不支持的文件类型：{}", fileType);
+            throw new IllegalArgumentException("不支持的文件类型：" + fileType);
+        }
+
+        logger.info("开始处理图片：{}", originalFilename);
+        
+        // 调用Claude API处理图片
+        String result = claudeService.processImage(file, prompt);
+        
+        // 返回结果
+        Result response = new Result();
+        response.setResultString(result);
+        
+        return response;
     }
 } 

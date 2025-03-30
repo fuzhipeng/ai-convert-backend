@@ -33,6 +33,8 @@ public class FileController {
     @Value("${claude.api.front_prompts.default}")
     private String defaultFrontPrompt;
     
+    @Value("${claude.api.photo_prompts.default}")
+    private String defaultPhotoPrompt;
 
     @PostMapping("/upload")
     public ApiResponse<FileUpload> uploadFile(
@@ -72,6 +74,13 @@ public class FileController {
     public ApiResponse<Result> stringFrontData(
             @RequestParam("content") String dataString) throws Exception {
         Result  result = fileService.uploadStringData(dataString,defaultFrontPrompt);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/imagePhotoData")
+    public ApiResponse<Result> imageFrontData(
+            @RequestParam("file") MultipartFile file) throws Exception {
+        Result result = fileService.processImageFile(file, defaultPhotoPrompt);
         return ApiResponse.success(result);
     }
  
