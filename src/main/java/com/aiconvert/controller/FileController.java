@@ -36,6 +36,9 @@ public class FileController {
     @Value("${claude.api.photo_prompts.default}")
     private String defaultPhotoPrompt;
 
+    @Value("${claude.api.dog_prompts.default}")
+    private String defaultDogPrompt;
+
     @PostMapping("/upload")
     public ApiResponse<FileUpload> uploadFile(
             @RequestParam("file") MultipartFile file,
@@ -83,7 +86,13 @@ public class FileController {
         Result result = fileService.processImageFile(file, defaultPhotoPrompt);
         return ApiResponse.success(result);
     }
- 
+
+    @PostMapping("/imageDogData")
+    public ApiResponse<Result> imageDogData(
+            @RequestParam("file") MultipartFile file) throws Exception {
+        Result result = fileService.processImageFile(file, defaultDogPrompt);
+        return ApiResponse.success(result);
+    }
     @PostMapping("/uploadUiData")
     public ApiResponse<FileUpload> uploaduploadUiFile(
             @RequestParam("file") MultipartFile file,
