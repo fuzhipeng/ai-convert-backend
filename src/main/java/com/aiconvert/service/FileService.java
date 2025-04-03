@@ -119,6 +119,17 @@ public class FileService {
         return result;
     }
 
+
+    public Result stringTariffData(String dataString,String prompt) throws Exception {
+        String htmlContent = claudeService.callDataClaudeWebApi(dataString, prompt);
+          //处理html内容
+          htmlContent = htmlContent.replace("```html", "").replace("```", "");
+          Result result = new Result();
+          result.setResultString(htmlContent);
+        return result;
+    }
+    
+
     public FileUpload uploadDataFile(MultipartFile file, String userId,String prompt) throws Exception {
         // 检查文件大小
         if (file.getSize() > MAX_FILE_SIZE) {

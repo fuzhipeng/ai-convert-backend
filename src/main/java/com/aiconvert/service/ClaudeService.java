@@ -169,6 +169,17 @@ public class ClaudeService {
     }
     
 
+    /**
+     * 将文件内容转换为string
+     * 修改为直接返回预定义的HTML，不调用Claude API
+     */
+    public String convertToString(String content, String prompt) throws Exception {
+        // 调用Claude API进行转换
+        String result = callDataClaudeApi(content, prompt);
+
+        return result;
+    }
+
      /**
      * 将文件内容转换为HTML
      * 修改为直接返回预定义的HTML，不调用Claude API
@@ -953,6 +964,113 @@ public class ClaudeService {
     }
 
 
+  /**
+     * 数据模板
+     * @param content
+     * @param fileType
+     * @return
+     */
+    public String callDataClaudeWebApi(String content, String prompt) {
+        long startTime = System.currentTimeMillis();
+        
+        // 记录完整的提示词和内容（为了调试）
+        logger.debug("完整的提示词和内容：\n---提示词开始---\n{}\n---提示词结束---\n---内容开始---\n{}\n---内容结束---", 
+            prompt, content);
+        
+        // 准备请求头
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("HTTP-Referer", "https://aiconvert.app");
+        headers.set("X-Title", "AI Document Converter");
+        
+        // 准备请求体
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "anthropic/claude-3-haiku");
+        
+        // 使用正确的消息结构：系统消息包含提示词，用户消息包含文件内容
+        List<Map<String, String>> messages = Arrays.asList(
+            Map.of(
+                "role", "system",
+                "content", prompt
+            ),
+            Map.of(
+                "role", "user",
+                "content", content
+            )
+        );
+        requestBody.put("messages", messages);
+        
+        // 记录请求体信息
+        logger.info("API请求参数 - 模型: {}, 系统消息(提示词)长度: {}, 用户消息(文件内容)长度: {}, 总消息数: {}", 
+            model, 
+            prompt.length(),
+            content.length(),
+            messages.size());
+        
+        // 估算token数量（粗略估计，每4个字符约1个token）
+        int estimatedTokens = (content.length() + prompt.length()) / 4;
+        logger.info("估计token数量: 约 {} tokens", estimatedTokens);
+        
+        // 记录完整请求体（debug级别）
+        logger.debug("API完整请求体：{}", requestBody);
+
+        // 记录请求信息
+        logger.info("准备调用 Claude API - URL: {}, Model: {}, 内容长度: {} 字符", 
+            apiUrl, model, content.length());
+
+        try {
+            // 发送请求
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            
+            // 记录发送请求时间
+            logger.info("开始发送API请求: {}", new java.util.Date());
+            
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, request, Map.class);
+            
+            long endTime = System.currentTimeMillis();
+            logger.info("Claude API调用完成，耗时：{} ms, 状态码: {}", (endTime - startTime), response.getStatusCode());
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map responseBody = response.getBody();
+                // 记录完整的API响应（为了调试）
+                logger.debug("API完整响应：{}", responseBody);
+                
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    Map<String, Object> message = (Map<String, Object>) choice.get("message");
+                    if (message != null) {
+                        String result = (String) message.get("content");
+                        logger.info("成功获取API响应，响应内容长度：{} 字符", result.length());
+                        
+                        // 记录使用的token信息（如果API返回）
+                        if (responseBody.containsKey("usage")) {
+                            Map<String, Object> usage = (Map<String, Object>) responseBody.get("usage");
+                            logger.info("API使用token统计 - 输入: {}, 输出: {}, 总计: {}", 
+                                usage.get("prompt_tokens"), 
+                                usage.get("completion_tokens"), 
+                                usage.get("total_tokens"));
+                        }
+                        
+                        // 记录API返回的内容（为了调试）
+                        String resultPreview = result.length() > 500 ? result.substring(0, 500) + "..." : result;
+                        logger.debug("API返回内容预览：\n---内容开始---\n{}\n---内容结束---", resultPreview);
+                        return result;
+                    }
+                }
+                logger.error("API响应格式异常：{}", responseBody);
+                throw new RuntimeException("API响应格式错误");
+            } else {
+                logger.error("API响应状态码异常：{}, 响应体：{}", 
+                    response.getStatusCode(), response.getBody());
+                throw new RuntimeException("API调用失败：" + response.getStatusCode());
+            }
+        } catch (HttpClientErrorException e) {
+            logger.error("API调用异常：{}, 响应体：{}", e.getMessage(), e.getResponseBodyAsString());
+            throw new RuntimeException("API调用异常：" + e.getMessage());
+        }
+    }
 
 
     private String getPromptForFileType(String fileType) {

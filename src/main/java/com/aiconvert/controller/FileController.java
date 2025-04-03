@@ -27,8 +27,14 @@ public class FileController {
     @Value("${claude.api.user_prompts.default}")
     private String defaultUserPrompt;
 
+
+    
     @Value("${claude.api.ui_prompts.default}")
     private String defaultUiPrompt;
+
+
+    @Value("${claude.api.tariff_prompts.default}")
+    private String defaultTariffPrompt;
 
     @Value("${claude.api.front_prompts.default}")
     private String defaultFrontPrompt;
@@ -70,6 +76,14 @@ public class FileController {
     public ApiResponse<Result> stringUiData(
             @RequestParam("content") String dataString) throws Exception {
             Result  result = fileService.uploadStringData(dataString,defaultUiPrompt);
+        return ApiResponse.success(result);
+    }
+
+
+    @PostMapping("/stringTariffData")
+    public ApiResponse<Result> stringTariffData(
+            @RequestParam("content") String dataString) throws Exception {
+            Result  result = fileService.stringTariffData(dataString,defaultTariffPrompt);
         return ApiResponse.success(result);
     }
 
