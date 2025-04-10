@@ -120,8 +120,8 @@ public class FileService {
     }
 
 
-    public Result stringTariffData(String dataString,String prompt) throws Exception {
-        String htmlContent = claudeService.callDataClaudeWebApi(dataString, prompt);
+    public Result stringTariffData(String dataString,String prompt,String model) throws Exception {
+        String htmlContent = claudeService.callDataClaudeWebApi(dataString, prompt,model);
           //处理html内容
           htmlContent = htmlContent.replace("```html", "").replace("```", "");
           Result result = new Result();

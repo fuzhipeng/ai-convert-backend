@@ -970,7 +970,7 @@ public class ClaudeService {
      * @param fileType
      * @return
      */
-    public String callDataClaudeWebApi(String content, String prompt) {
+    public String callDataClaudeWebApi(String content, String prompt,String model) {
         long startTime = System.currentTimeMillis();
         
         // 记录完整的提示词和内容（为了调试）
@@ -986,7 +986,7 @@ public class ClaudeService {
         
         // 准备请求体
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "anthropic/claude-3-haiku");
+        requestBody.put("model", model);
         
         // 使用正确的消息结构：系统消息包含提示词，用户消息包含文件内容
         List<Map<String, String>> messages = Arrays.asList(

@@ -36,6 +36,9 @@ public class FileController {
     @Value("${claude.api.tariff_prompts.default}")
     private String defaultTariffPrompt;
 
+    @Value("${claude.api.story_prompts.default}")
+    private String defaultStoryPrompt;
+
     @Value("${claude.api.front_prompts.default}")
     private String defaultFrontPrompt;
     
@@ -83,7 +86,15 @@ public class FileController {
     @PostMapping("/stringTariffData")
     public ApiResponse<Result> stringTariffData(
             @RequestParam("content") String dataString) throws Exception {
-            Result  result = fileService.stringTariffData(dataString,defaultTariffPrompt);
+            Result  result = fileService.stringTariffData(dataString,defaultTariffPrompt,"anthropic/claude-3-haiku");
+        return ApiResponse.success(result);
+    }
+
+
+    @PostMapping("/stringStoryData")
+    public ApiResponse<Result> stringStoryData(
+            @RequestParam("content") String dataString) throws Exception {
+            Result  result = fileService.stringTariffData(dataString,defaultStoryPrompt,"google/gemini-2.5-pro-exp-03-25:free");
         return ApiResponse.success(result);
     }
 
