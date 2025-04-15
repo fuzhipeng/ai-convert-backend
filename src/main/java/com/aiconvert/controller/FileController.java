@@ -94,7 +94,7 @@ public class FileController {
     @PostMapping("/stringStoryData")
     public ApiResponse<Result> stringStoryData(
             @RequestParam("content") String dataString) throws Exception {
-            Result  result = fileService.stringTariffData(dataString,defaultStoryPrompt,"google/gemini-2.5-pro-exp-03-25:free");
+            Result  result = fileService.stringTariffData(dataString,defaultStoryPrompt,"deepseek/deepseek-chat-v3-0324");
         return ApiResponse.success(result);
     }
 
